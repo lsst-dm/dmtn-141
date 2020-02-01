@@ -40,7 +40,8 @@
 
 .. Please do not modify tocdepth; will be fixed when a new Sphinx theme is shipped.
 
-.. sectnum::
+.. Uncomment the line below to use numbered section headings.
+  .. sectnum::
 
 .. TODO: Delete the note below before merging new content to the master branch.
 
@@ -52,6 +53,38 @@
 
 .. Add content here.
 .. Do not include the document title (it's automatically added from metadata.yaml).
+
+Overview
+========
+
+Link to the `repo`_.
+
+.. _repo: https://github.com/lsst/sv-distiller
+
+Design Principles
+=================
+
+Words
+
+Objects
+=======
+
+Words
+
+Dataset Generators
+------------------
+
+Words
+
+Measurers
+---------
+
+Words
+
+Aggregators
+-----------
+
+Words
 
 .. .. rubric:: References
 
