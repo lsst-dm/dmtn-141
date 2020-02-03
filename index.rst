@@ -82,7 +82,7 @@ SV-distiller will be called by specifying the following:
 
 - A configuration file specifying the type of dataset to generate from the input repository, the metrics to measure, and the aggregators that will be used to roll up the measured metrics.
 
-SV-distiller will report the measurements, but will not assess them relative to some specifications (as in, e.g., lsst.verify).
+SV-distiller will report the measurements, but will not assess them relative to some specifications (as in, e.g., `lsst.verify`).
 However, because the Measurements (and many extras) will be persisted, it will be trivial to assess them relative to specifications, if desired.
 
 Intended to work with lsst.verify `Measurements`_.
@@ -91,6 +91,11 @@ Intended to work with lsst.verify `Measurements`_.
 
 All of the metrics are evaluated independently.
 In some cases, closely related metrics (e.g., median of a distribution and number of items from the same distribution above some threshold) may call the same underlying code.
+
+.. figure:: /_static/SV-Distill-crop.png
+  :name: block-diagram
+
+  Block diagram showing the high level design that will be described in more detail in following sections.
 
 Objects
 =======
