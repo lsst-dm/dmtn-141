@@ -49,7 +49,8 @@
 
    **This technote is not yet published.**
 
-   This TechNote details the design concepts for the SV-distiller package. SV-distiller is a redesigned update to validate_drp, with the goal of making it easier for users to implement new metric calculations and easily configure the metrics that will be measured in any given run.
+This TechNote details the design concepts for the SV-distiller package.
+SV-distiller is a redesigned update to validate_drp, with the goal of making it easier for users to implement new metric calculations and easily configure the metrics that will be measured in any given run.
 
 .. Add content here.
 .. Do not include the document title (it's automatically added from metadata.yaml).
@@ -66,11 +67,11 @@ Link to the `repo`_.
 Design Principles
 =================
 
-The overarching design principle driving SV-distiller is to make implementation and measurement of new metrics relatively simple, and to enable configuration-driven measurement of the metrics so that users can calculate only those of immediate interest instead of the entire set, if desired. 
+The overarching design principle driving SV-distiller is to make implementation and measurement of new metrics relatively simple, and to enable configuration-driven measurement of the metrics so that users can calculate only those of immediate interest instead of the entire set, if desired.
 A core principle is make the individual analysis component modular to (1) enable scaling to a large dataset that might require many parallel analysis jobs, (2) to facilitate collaborative development, (3) and to make it easy to add new metrics.
-SV-distiller assumes that the data reduction has all been performed prior to the validation/verification work. 
-Thus the starting point is a Butler repository of processed data products. 
-This enables a user to run SV-distiller on a dataset multiple times, and to do so quickly. 
+SV-distiller assumes that the data reduction has all been performed prior to the validation/verification work.
+Thus the starting point is a Butler repository of processed data products.
+This enables a user to run SV-distiller on a dataset multiple times, and to do so quickly.
 [Note that we haven’t yet decided what the “known point” to which data should be processed will be. But a dataset that has been processed through coaddition and multi-frame/forced source photometry will almost certainly be sufficient.]
 
 SV-distiller will be called by specifying the following:
@@ -81,13 +82,14 @@ SV-distiller will be called by specifying the following:
 
 - A configuration file specifying the type of dataset to generate from the input repository, the metrics to measure, and the aggregators that will be used to roll up the measured metrics.
 
-SV-distiller will report the measurements, but will not assess them relative to some specifications (as in, e.g., lsst.verify). However, because the Measurements (and many extras) will be persisted, it will be trivial to assess them relative to specifications, if desired.
+SV-distiller will report the measurements, but will not assess them relative to some specifications (as in, e.g., lsst.verify).
+However, because the Measurements (and many extras) will be persisted, it will be trivial to assess them relative to specifications, if desired.
 
 Intended to work with lsst.verify `Measurements`_.
 
 .. _Measurements: https://pipelines.lsst.io/py-api/lsst.verify.Measurement.html 
 
-All of the metrics are evaluated independently. 
+All of the metrics are evaluated independently.
 In some cases, closely related metrics (e.g., median of a distribution and number of items from the same distribution above some threshold) may call the same underlying code.
 
 Objects
@@ -98,15 +100,15 @@ We provide an overview of core base classes below.
 DataID Generators
 -----------------
 
-Data identifier generators will produce an iterable where each element stores the data identifiers necessary for the dataset generators to operate on. 
+Data identifier generators will produce an iterable where each element stores the data identifiers necessary for the dataset generators to operate on.
 Since the data identifier generators need to know what dataset generator they are serving, it may be that both pieces of functionality will be implemented in the same class.
 
 
 Dataset Generators
 ------------------
 
-Dataset generators are responsible for producing the dataset necessary for a measurement algorithm to do its work. 
-The expected output from the dataset generator is a tabular object, e.g. an astropy.Table.  
+Dataset generators are responsible for producing the dataset necessary for a measurement algorithm to do its work.
+The expected output from the dataset generator is a tabular object, e.g. an astropy.Table.
 In many cases, this is a matched catalog of some sort.
 Dataset generators will be constructed from a Butler, though other arguments may be passed in via *args and **kwargs.
 Possible dataset types include a single visit image, a deep coadd (or set of coadds), a set of visits from which a matched catalog of sources will be created, and possibly even alert packets, images, or metadata (basically, anything accessible by the Butler).
@@ -114,15 +116,22 @@ Possible dataset types include a single visit image, a deep coadd (or set of coa
 Measurers
 ---------
 
-The Measurers are the primary objects for evaluating performance metrics given tabular input data. The output of a Measurer is an lsst-verify Measurement. In practice, the Measurers can operate on fine-grained data (e.g., an individual visit, individual patch). It is expected that some of the Measurers will use the extras that can be associated with a Measurement, in addition to the scalar value.
+The Measurers are the primary objects for evaluating performance metrics given tabular input data.
+The output of a Measurer is an lsst-verify Measurement.
+In practice, the Measurers can operate on fine-grained data (e.g., an individual visit, individual patch).
+It is expected that some of the Measurers will use the extras that can be associated with a Measurement, in addition to the scalar value.
 
-The output lsst-verify Measurements are planned to be stored in an intermediate database to hold the results of metrics computed on fine-grained input data. 
-This intermediate database should make it possible for users to search for specific units of input data and thereby more easily diagnose anomalies, etc. 
+The output lsst-verify Measurements are planned to be stored in an intermediate database to hold the results of metrics computed on fine-grained input data.
+This intermediate database should make it possible for users to search for specific units of input data and thereby more easily diagnose anomalies, etc.
 
 Aggregators
 -----------
 
-The aggregators compile summary statistics for the dataset of interest, encapsulated as a lsst.verify Measurements. These high-level metrics can be used to more readily verify pass/fail status, provide a high-level summary of performance, and reveal the presence of outliers in the performance distribution. The aggregators take as input the lsst.verify Measurements that have been computed by the Measurers. In the simplest cases, the aggregator may simply pass a Measurement to the next stage of analysis. In more general cases, an aggregator will compute statistics such as median, mean, maximum, percentiles, evaluating intercepts or thresholds, number of instances above or below some value.
+The aggregators compile summary statistics for the dataset of interest, encapsulated as a lsst.verify Measurements.
+These high-level metrics can be used to more readily verify pass/fail status, provide a high-level summary of performance, and reveal the presence of outliers in the performance distribution.
+The aggregators take as input the lsst.verify Measurements that have been computed by the Measurers.
+In the simplest cases, the aggregator may simply pass a Measurement to the next stage of analysis.
+In more general cases, an aggregator will compute statistics such as median, mean, maximum, percentiles, evaluating intercepts or thresholds, number of instances above or below some value.
 
 Key concepts
 ============
@@ -130,7 +139,7 @@ Key concepts
 High-level Metrics
 ------------------
 
-This design specifically takes into account the desire to have high-level measurements produced from a set of measurements made on a finer grained scale. 
+This design specifically takes into account the desire to have high-level measurements produced from a set of measurements made on a finer grained scale.
 Measurement of these metrics requires defining three key pieces of information:
 
 - The dataset generator class to use for passing data identifiers to the fine grained measurement algorithm.
@@ -142,7 +151,7 @@ Measurement of these metrics requires defining three key pieces of information:
 Registries for Classes/Functions
 --------------------------------
 
-A key principle for making this framework function is the concept of registries for each of the main kinds of classes and functions. 
+A key principle for making this framework function is the concept of registries for each of the main kinds of classes and functions.
 In essence these are nothing more than dictionaries of name/object pairs.  This does several things:
 
 - Given a name of one of these objects and a git SHA1, one can tell exactly what code was run at a given time.
