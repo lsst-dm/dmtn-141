@@ -118,6 +118,27 @@ In many cases, this is a matched catalog of some sort.
 Dataset generators will be constructed from a Butler, though other arguments may be passed in via *args and **kwargs.
 Possible dataset types include a single visit image, a deep coadd (or set of coadds), a set of visits from which a matched catalog of sources will be created, and possibly even alert packets, images, or metadata (basically, anything accessible by the Butler).
 
+.. code-block:: python
+
+  class DataSetGeneratorBase:
+      """Class to generate tabular datasets for use by measurers
+      Parameters:
+        butler : `lsst.daf.persistence.Butler`
+          Butler for retrieving data
+      """
+      def __init__(self, butler, *args, **kwargs):
+          raise NotImplementedError()
+
+      def generate(self, dataIdList, *args, **kwargs):
+          """Function to generate tabular datasets for use by measurers
+            dataIdList : `list`
+              List of dataIds to use to generate output
+          Output:
+            result : Table-like thingy
+              Table of data
+          """
+          raise NotImplementedError()
+
 Measurers
 ---------
 
@@ -129,6 +150,28 @@ It is expected that some of the Measurers will use the extras that can be associ
 The output lsst-verify Measurements are planned to be stored in an intermediate database to hold the results of metrics computed on fine-grained input data.
 This intermediate database should make it possible for users to search for specific units of input data and thereby more easily diagnose anomalies, etc.
 
+.. code-block:: python
+
+  class MeasurerBase:
+      def __init__(self, butler, *args, **kwargs):
+          raise NotImplementedError()
+      def measure(self, tabularDataset, columnList=None, dataIdList=None, *args, **kwargs):
+          """Measure a quantity on the input tabular dataset
+          Parameters
+          ----------
+          tabularDataset : Table-like thingy
+            A tabular data structure on which to make a measurement
+          columnList : `list`, optional
+            An optional list of column names to use in the computation
+          dataIdList : `list`, optional
+            A list of data ids to use to look up metadata in the input repository
+          Output
+          ------
+          measurement : `lsst.verify.Measurement`
+            Measurement of the thing we are measuring
+          """
+          raise NotImplementedError()
+
 Aggregators
 -----------
 
@@ -137,6 +180,24 @@ These high-level metrics can be used to more readily verify pass/fail status, pr
 The aggregators take as input the lsst.verify Measurements that have been computed by the Measurers.
 In the simplest cases, the aggregator may simply pass a Measurement to the next stage of analysis.
 In more general cases, an aggregator will compute statistics such as median, mean, maximum, percentiles, evaluating intercepts or thresholds, number of instances above or below some value.
+
+.. code-block:: python
+
+  class AggregatorBase:
+      def __init__(self, *args, **kwargs):
+          raise NotImplementedError()
+      def aggregate(self, measurementList, *args, **kwargs):
+          """Aggregate a list of measurements
+          Parameters
+          ----------
+            measurementList : `list` of `lsst.verify.Measurement`
+              List of measurements to aggregate
+          Output
+          ------
+            measurement : `lsst.verify.Measurement`
+              Aggregated measurement
+          """
+          raise NotImplementedError()
 
 Key concepts
 ============
@@ -185,6 +246,63 @@ The conceptual workflow is to
 #. Loop over all of the high-level metrics. For each, gather the associated intermediate results and compute summary statistics using the associated aggregator.
 
 #. Optionally, run an afterburner script on the set of output high-level metrics to evaluate which specifications have been met.
+
+.. code-block:: python
+
+  measReg = {
+      'foo': measureFoo,
+      'bar': measureBar,
+      'baz': measureBaz
+      }
+  
+  aggReg = {
+      'median': meadianAgg,
+      'min': minAgg,
+      'uber_median': histMedianAgg
+      }
+  
+  dsGenReg = {
+      'matched': MatchedSetGenerator,
+      'single': SingleEpochGenerator,
+      'meta': ImageMetadataGenerator
+      }
+  
+  class RollUp:
+      def __init__(self, ds, meas, agg):
+          self.ds = ds
+          self.meas = meas
+          self.agg = agg
+  
+  rollupDefs = {
+      'BOB': RollUp('matched, 'foo', 'min'),
+      'ALICE': RollUp('matched', 'bar', 'median'),
+      'SAM': RollUp('single', 'bar', 'uber_median'),
+      'SHARON': RollUp('meta', 'baz', 'min')
+      }
+  
+  dsetMap = {}
+  for ru in rollupDefs:
+      if ru.ds not in dsetMap:
+          dsetMap[ru.ds] = set()
+      dsetMap[ru.ds].add(ru.meas)
+  
+  # Now to run things
+  results = {}
+  for id in idList:  # Parallelize on this??
+      for dsName in dsetMap:
+          dataset = dsGenReg[dsName](id, butler, ....)
+          if dsName not in results:
+              results[dsName] = {}
+          for meas in dsetMap[dsName]:
+              if meas not in results[dsName]:
+                  results[dsName][meas] = []
+              results[dsName][meas].append(measReg[meas](dataset, ...)
+  
+  # Now gather
+  aggs = {}
+  for ru in rollupDefs:
+      rud = rollupDefs[ru]
+      aggs[ru] = rud.agg(results[rud.ds][rud.meas], ...)
 
 Plans for Code Development
 ==========================
