@@ -62,7 +62,7 @@ The SV-distiller is a proposed framework to automate science verification and va
 It is intended to be general enough to support evaluation of the data products from both the Alert Production and Data Release Production pipelines, and to be capable of running on precursor datasets, simulations, and LSST on-sky data.
 Link to the `repo`_.
 
-.. _repo: https://github.com/lsst/sv-distiller
+.. _repo: https://github.com/lsst/sv-distiller/tree/initial_stubs
 
 Design Principles
 =================
