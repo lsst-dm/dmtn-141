@@ -276,7 +276,7 @@ The conceptual workflow is to
           self.agg = agg
 
   rollupDefs = {
-      'BOB': RollUp('matched, 'foo', 'min'),
+      'BOB': RollUp('matched', 'foo', 'min'),
       'ALICE': RollUp('matched', 'bar', 'median'),
       'SAM': RollUp('single', 'bar', 'uber_median'),
       'SHARON': RollUp('meta', 'baz', 'min')
