@@ -58,9 +58,9 @@ SV-distiller is a redesigned update to validate_drp, with the goal of making it 
 Overview
 ========
 
-The SV-distiller is a proposed framework to automate science verification and validation analysis tasks. 
+The SV-distiller is a proposed framework to automate science verification and validation analysis tasks.
 It is intended to be general enough to support evaluation of the data products from both the Alert Production and Data Release Production pipelines, and to be capable of running on precursor datasets, simulations, and LSST on-sky data.
-Link to the `repo`_.
+The code can be seen at this github `repo`_.
 
 .. _repo: https://github.com/lsst/sv-distiller/tree/initial_stubs
 
@@ -85,9 +85,10 @@ SV-distiller will be called by specifying the following:
 SV-distiller will report the measurements, but will not assess them relative to some specifications (as in, e.g., `lsst.verify`).
 However, because the Measurements (and many extras) will be persisted, it will be trivial to assess them relative to specifications, if desired.
 
-Intended to work with lsst.verify `Measurements`_.
+Note that the objects that SV-distiller is intended to work with are `lsst.verify` `Measurements`_.
+These will be persisted along with sufficient `Measurement` "extras" to allow metrics from smaller units of data to be easily aggregated over together (for example, aggregating measurements on all the individual tracts in a 100 square degree area into a single summary value).
 
-.. _Measurements: https://pipelines.lsst.io/py-api/lsst.verify.Measurement.html 
+.. _Measurements: https://pipelines.lsst.io/py-api/lsst.verify.Measurement.html
 
 All of the metrics are evaluated independently.
 In some cases, closely related metrics (e.g., median of a distribution and number of items from the same distribution above some threshold) may call the same underlying code.
@@ -100,7 +101,7 @@ In some cases, closely related metrics (e.g., median of a distribution and numbe
 Objects
 =======
 
-We provide an overview of core base classes below.
+We provide an overview of core base classes below. A schematic representation of the SV-distiller design is shown :ref:`in the above figure <block-diagram>`.
 
 DataID Generators
 -----------------
@@ -113,10 +114,11 @@ Dataset Generators
 ------------------
 
 Dataset generators are responsible for producing the dataset necessary for a measurement algorithm to do its work.
-The expected output from the dataset generator is a tabular object, e.g. an astropy.Table.
+The expected output from the dataset generator is a tabular object, e.g. an `astropy.Table`.
 In many cases, this is a matched catalog of some sort.
 Dataset generators will be constructed from a Butler, though other arguments may be passed in via *args and **kwargs.
 Possible dataset types include a single visit image, a deep coadd (or set of coadds), a set of visits from which a matched catalog of sources will be created, and possibly even alert packets, images, or metadata (basically, anything accessible by the Butler).
+An important reason for implementing dataset generators is to ensure that all metric measurement functions can expect to be passed the same type of object, regardless of the variety of input data being used.
 
 .. code-block:: python
 
@@ -175,11 +177,11 @@ This intermediate database should make it possible for users to search for speci
 Aggregators
 -----------
 
-The aggregators compile summary statistics for the dataset of interest, encapsulated as a lsst.verify Measurements.
+The aggregators compile summary statistics for the dataset of interest, encapsulated as lsst.verify Measurements.
 These high-level metrics can be used to more readily verify pass/fail status, provide a high-level summary of performance, and reveal the presence of outliers in the performance distribution.
 The aggregators take as input the lsst.verify Measurements that have been computed by the Measurers.
 In the simplest cases, the aggregator may simply pass a Measurement to the next stage of analysis.
-In more general cases, an aggregator will compute statistics such as median, mean, maximum, percentiles, evaluating intercepts or thresholds, number of instances above or below some value.
+In more general cases, an aggregator will compute statistics such as median, mean, maximum, percentiles, evaluating intercepts or thresholds, or number of instances above or below some value.
 
 .. code-block:: python
 
@@ -229,17 +231,17 @@ In essence these are nothing more than dictionaries of name/object pairs.  This 
 Running
 =======
 
-A pseudo code is `here`_. 
+A pseudo code is `here`_.
 
 .. _here: https://github.com/lsst/sv-distiller/blob/initial_stubs/code_design/runner_pseudo.py
 
-The conceptual workflow is to 
+The conceptual workflow is to
 
-#. Use a DataID Generator to create a list of dataid lists. These dataid lists specify the individual units of data for fine-grained analysis.
+#. Use a DataID Generator to create a list of dataId lists. These dataId lists specify the individual units of data for fine-grained analysis.
 
-#. Loop over dataid lists. For each list of dataids, there will be a list of dataset generators. Create the associated dataset.
+#. Loop over dataId lists. For each list of dataIds, there will be a list of dataset generators. Create the associated dataset.
 
-#. Loop of datasets. For each, there will be a list of associated Measurers. 
+#. Loop over datasets. For each, there will be a list of associated Measurers.
 
 #. Run the associated Measurers and push the output Measurements to intermediate database.
 
@@ -254,38 +256,38 @@ The conceptual workflow is to
       'bar': measureBar,
       'baz': measureBaz
       }
-  
+
   aggReg = {
-      'median': meadianAgg,
+      'median': medianAgg,
       'min': minAgg,
       'uber_median': histMedianAgg
       }
-  
+
   dsGenReg = {
       'matched': MatchedSetGenerator,
       'single': SingleEpochGenerator,
       'meta': ImageMetadataGenerator
       }
-  
+
   class RollUp:
       def __init__(self, ds, meas, agg):
           self.ds = ds
           self.meas = meas
           self.agg = agg
-  
+
   rollupDefs = {
       'BOB': RollUp('matched, 'foo', 'min'),
       'ALICE': RollUp('matched', 'bar', 'median'),
       'SAM': RollUp('single', 'bar', 'uber_median'),
       'SHARON': RollUp('meta', 'baz', 'min')
       }
-  
+
   dsetMap = {}
   for ru in rollupDefs:
       if ru.ds not in dsetMap:
           dsetMap[ru.ds] = set()
       dsetMap[ru.ds].add(ru.meas)
-  
+
   # Now to run things
   results = {}
   for id in idList:  # Parallelize on this??
@@ -297,7 +299,7 @@ The conceptual workflow is to
               if meas not in results[dsName]:
                   results[dsName][meas] = []
               results[dsName][meas].append(measReg[meas](dataset, ...)
-  
+
   # Now gather
   aggs = {}
   for ru in rollupDefs:
@@ -308,6 +310,7 @@ Plans for Code Development
 ==========================
 
 Identify the set of DataSetGenerators, Measurers, and Aggregators that are needed. This step is building the registry of classes / functions.
+Once basic implementations of some simple DataSetGenerators, Measurers, and Aggregators have been written, it should be relatively straightforward for developers to contribute additional functions / subclasses.
 
 .. .. rubric:: References
 
